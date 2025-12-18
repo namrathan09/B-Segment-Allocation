@@ -117,7 +117,7 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
         for index, row in df_pisa_filtered.iterrows():
             new_row = {
                 'Barcode': row['barcode'], # Use the newly created 'barcode' column
-                'Company code': row.get('cocd'),
+                'Company code': row.get('company_code'),
                 'Vendor number': row.get('vendor_number'),
                 'Received Date': row.get('received_date'),
                 'Completion Date': None, 'Status': None , 'Today': today_date, 'Channel': 'PISA',
@@ -376,7 +376,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
             pisa_row = df_pisa_indexed.loc[barcode]
             vendor_name = pisa_row.get('vendor') if pisa_row.get('vendor') else vendor_name
             vendor_number = pisa_row.get('vendor_number') if pisa_row.get('vendor_number') else vendor_number
-            company_code = pisa_row.get('cocd') if pisa_row.get('cocd') else company_code # Use 'cocd' from PISA for company code
+            company_code = pisa_row.get('company_code') if pisa_row.get('company_code') else company_code # Use 'cocd' from PISA for company code
            
         elif channel == 'ESM' and not df_esm_indexed.empty and barcode in df_esm_indexed.index:
             esm_row = df_esm_indexed.loc[barcode]
@@ -387,7 +387,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
             pm7_row = df_pm7_indexed.loc[barcode]
             vendor_name = pm7_row.get('vendor_name') if pm7_row.get('vendor_name') else vendor_name
             vendor_number = pm7_row.get('vendor_number') if pm7_row.get('vendor_number') else vendor_number
-            company_code = pm7_row.get('co_code') if pm7_row.get('co_code') else company_code # Use 'co_code' from PM7 for company code
+            company_code = pm7_row.get('company_code') if pm7_row.get('company_code') else company_code # Use 'co_code' from PM7 for company code
  
         new_central_row_data = row_consolidated.to_dict()
         new_central_row_data['Vendor Name'] = vendor_name if vendor_name is not None else ''
