@@ -478,7 +478,9 @@ def index():
  
 @app.route('/process', methods=['POST'])
 def process_files():
+    app.logger.info("Starting process_files function.")
     temp_dir = tempfile.mkdtemp()
+    app.logger.info(f"Temporary directory created: {temp_dir}")
  
     # Ensure session variables are cleared at the start of a new process
     session.pop('consolidated_output_path', None)
@@ -666,4 +668,5 @@ def cleanup_session():
 if __name__ == '__main__':
     app.run(debug=True)
  
+
  
