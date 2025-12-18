@@ -1,6 +1,6 @@
 Flask==2.3.2
-gunicorn==21.2.0  # Added for production server on Render
 numpy==1.26.2
 openpyxl==3.1.2
-pandas>=2.3.0
+pandas==2.1.3
  
+
