@@ -1,5 +1,5 @@
 # api/index.py
-import os
+import os # Ensure os is imported at the top
 from flask import Flask, request, render_template, redirect, url_for, send_file, flash, session
 from werkzeug.utils import secure_filename
 import pandas as pd
@@ -21,7 +21,20 @@ warnings.filterwarnings('ignore')
 
 # --- Start of your app.py content ---
 
-app = Flask(__name__)
+# --- ADD THESE LINES HERE ---
+# Explicitly tell Flask where to find static and templates
+# os.path.dirname(__file__) gives the directory of the current file (api/index.py)
+# The templates and static folders are at the project root,
+# so we need to go up one level (..)
+template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'templates')
+static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'static')
+# --- END ADDITION ---
+
+# --- MODIFY THIS LINE ---
+# Original: app = Flask(__name__)
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+# --- END MODIFICATION ---
+
 # IMPORTANT: DO NOT expose your secret key directly in code for production.
 # Use environment variables for Vercel.
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default_secret_key_for_dev_only')
@@ -659,7 +672,9 @@ def download_file(filename):
         file_path_in_temp = session['central_output_path']
         print(f"DEBUG: Matched final central file. Full path: {file_path_in_temp}")
     else:
-        print(f"DEBUG: Filename '{filename}' did not match any known session output files.")
+        print(f"DEBUG: Filename '{filename}' not found or session data missing/expired. Full path attempted: {file_path_in_temp}")
+        flash('File not found for download or session expired. Please re-run the process.', 'error')
+        return redirect(url_for('index'))
  
     if file_path_in_temp and os.path.exists(file_path_in_temp):
         print(f"DEBUG: File '{file_path_in_temp}' exists. Attempting to send.")
@@ -700,4 +715,4 @@ def cleanup_session():
 if __name__ == '__main__':
     app.run(debug=True)
 
-# --- End of your app.py content ---
+# --- End of your app.py content --- 
