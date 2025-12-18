@@ -30,22 +30,14 @@ template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 't
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'static')
 # --- END ADDITION ---
 
-# --- MODIFY THIS LINE ---
-# Original: app = Flask(__name__)
-app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
-# --- END MODIFICATION ---
+template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'templates')
+static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'static')
 
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 # IMPORTANT: DO NOT expose your secret key directly in code for production.
 # Use environment variables for Vercel.
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default_secret_key_for_dev_only')
 
-# Vercel's serverless functions have a writable /tmp directory
-# which is cleaned up after each invocation.
-# We will not create fixed UPLOAD_FOLDER or DOWNLOAD_FOLDER
-# as these should be managed within the temporary directory for each request.
-# For temporary file operations, we will rely on tempfile module.
-
-# Define consolidated_columns globally
 CONSOLIDATED_OUTPUT_COLUMNS = [
     'Barcode', 'Processor', 'Channel', 'Category', 'Company code', 'Region',
     'Vendor number', 'Vendor Name', 'Status', 'Received Date', 'Re-Open Date',
