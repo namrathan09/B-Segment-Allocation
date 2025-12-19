@@ -309,7 +309,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
         print("Warning: 'barcode' column not found in PISA lookup. Cannot perform PISA lookups.")
  
     df_esm_indexed = pd.DataFrame()
-    # Now looking for 'barcode' directly in ESM lookup (THIS WAS THE MISSED SPOT)
+    # CORRECTED: Now looking for 'barcode' directly in ESM lookup
     if 'barcode' in df_esm_lookup.columns:
         df_esm_lookup['barcode'] = df_esm_lookup['barcode'].astype(str)
         df_esm_indexed = df_esm_lookup.set_index('barcode')
