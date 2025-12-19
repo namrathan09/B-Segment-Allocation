@@ -301,7 +301,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
     df_pm7_lookup = clean_column_names(df_pm7_original.copy())
  
     df_pisa_indexed = pd.DataFrame()
-    # Now looking for 'barcode' directly
+    # Now looking for 'barcode' directly in PISA lookup
     if 'barcode' in df_pisa_lookup.columns:
         df_pisa_lookup['barcode'] = df_pisa_lookup['barcode'].astype(str)
         df_pisa_indexed = df_pisa_lookup.set_index('barcode')
@@ -309,7 +309,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
         print("Warning: 'barcode' column not found in PISA lookup. Cannot perform PISA lookups.")
  
     df_esm_indexed = pd.DataFrame()
-    # Now looking for 'barcode' directly
+    # Now looking for 'barcode' directly in ESM lookup (THIS WAS THE MISSED SPOT)
     if 'barcode' in df_esm_lookup.columns:
         df_esm_lookup['barcode'] = df_esm_lookup['barcode'].astype(str)
         df_esm_indexed = df_esm_lookup.set_index('barcode')
@@ -357,7 +357,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
             company_code = pisa_row.get('company_code') if pisa_row.get('company_code') else company_code
            
         elif channel == 'ESM' and not df_esm_indexed.empty and barcode in df_esm_indexed.index:
-            esm_row = df_esm_indexed.loc[barcode]
+            esm_row = df_esm_indexed.loc[barcode] # Accessing by 'barcode' index
             company_code = esm_row.get('company_code') if esm_row.get('company_code') else company_code
             category = esm_row.get('subcategory') if esm_row.get('subcategory') else category
  
