@@ -13,27 +13,14 @@ from werkzeug.utils import secure_filename
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
-# --- Vercel Specific Path Configuration ---
-# Vercel expects templates and static files to be within your project structure.
-# If your index.py is in 'api/' and templates are in 'templates/' at the root,
-# then we need to go up one level.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(BASE_DIR, '..', 'templates')
 static_dir = os.path.join(BASE_DIR, '..', 'static')
 
-# Initialize Flask app
-# Vercel needs the 'app' object at the root of the file.
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 
-# Vercel production setup: Use an environment variable for the secret key
-# Provide a fallback for local development if FLASK_SECRET_KEY isn't set.
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default_secret_key_for_local_dev_only')
-# You do not need app.config['UPLOAD_FOLDER'] or app.config['DOWNLOAD_FOLDER']
-# because tempfile.mkdtemp() will handle temporary storage dynamically.
-# os.makedirs for these are also not needed on Vercel as /tmp is the only writable place.
 
-
-# --- Global Variables (from app.py) ---
 CONSOLIDATED_OUTPUT_COLUMNS = [
     'Barcode', 'Processor', 'Channel', 'Category', 'Company code', 'Region',
     'Vendor number', 'Vendor Name', 'Status', 'Received Date', 'Re-Open Date',
@@ -160,7 +147,7 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
                 'Status': row.get('task'),
                 'Today': today_date,
                 'Channel': 'PM7',
-                'Company code': row.get('co_code'), # Changed from company_code to co_code as per app.py consolidation
+                'Company code': row.get('company_code'), 
                 'Re-Open Date': None,
                 'Allocation Date': None, 'Completion Date': None, 'Requester': None,
                 'Clarification Date': None, 'Aging': None, 'Remarks': None,
@@ -635,11 +622,6 @@ def process_files():
         session.pop('temp_dir', None)
         return redirect(url_for('index'))
     finally:
-        # Important: In Vercel, functions are stateless.
-        # The temp_dir might persist for the duration of the *current* invocation,
-        # but is wiped between invocations. Explicit cleanup here is still good practice
-        # for local testing and to release resources early if possible, but Vercel
-        # will handle the /tmp cleanup after the function exits.
         pass
 
 
@@ -657,9 +639,7 @@ def download_file(filename):
         print("DEBUG: temp_dir not found in session.")
         flash('File not found for download or session expired. Please re-run the process.', 'error')
         return redirect(url_for('index'))
-
-    # Construct the expected full path based on the session's temp_dir
-    # This is safer than relying on the exact string in session if temp_dir changes
+        
     consolidated_session_path = session.get('consolidated_output_path')
     central_session_path = session.get('central_output_path')
 
@@ -707,7 +687,5 @@ def cleanup_session():
     session.pop('central_output_path', None)
     return redirect(url_for('index'))
 
-# This block is for local development only and should not be active on Vercel.
-# Vercel's build process will find and run your 'app' object directly.
 if __name__ == '__main__':
     app.run(debug=True)
