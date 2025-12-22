@@ -1,5 +1,3 @@
-# api/index.py
-
 import os
 import pandas as pd
 from datetime import datetime
@@ -10,17 +8,20 @@ import re
 from flask import Flask, request, render_template, redirect, url_for, send_file, flash, session
 from werkzeug.utils import secure_filename
 
-# Suppress warnings
 warnings.filterwarnings('ignore')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(BASE_DIR, '..', 'templates')
 static_dir = os.path.join(BASE_DIR, '..', 'static')
 
+# Initialize Flask app
+# Vercel needs the 'app' object at the root of the file.
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+
 
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default_secret_key_for_local_dev_only')
 
+# --- Global Variables (from app.py) ---
 CONSOLIDATED_OUTPUT_COLUMNS = [
     'Barcode', 'Processor', 'Channel', 'Category', 'Company code', 'Region',
     'Vendor number', 'Vendor Name', 'Status', 'Received Date', 'Re-Open Date',
@@ -275,7 +276,7 @@ def process_central_file_step2_update_existing(consolidated_df, central_file_inp
                 df_central_cleaned[col] = None
 
     except Exception as e:
-        return False, f"Error processing central file (after Step 2): {e}"
+        return False, f"Error processing central file (Step 2): {e}"
     print(f"--- Central File Status Processing (Step 2) Complete ---")
     return True, df_central_cleaned
 
@@ -351,8 +352,8 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
         # --- PISA Lookup ---
         if channel == 'PISA' and not df_pisa_indexed.empty and barcode in df_pisa_indexed.index:
             pisa_row = df_pisa_indexed.loc[barcode]
-            if 'vendor' in pisa_row.index and pd.notna(pisa_row['vendor']): # Using 'vendor' column
-                vendor_name = pisa_row['vendor']
+            if 'vendor_name' in pisa_row.index and pd.notna(pisa_row['vendor_name']): 
+                vendor_name = pisa_row['vendor_name']
             if 'vendor_number' in pisa_row.index and pd.notna(pisa_row['vendor_number']):
                 vendor_number = pisa_row['vendor_number']
             if 'company_code' in pisa_row.index and pd.notna(pisa_row['company_code']):
@@ -367,9 +368,9 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
                 company_code = esm_row['company_code']
             if 'subcategory' in esm_row.index and pd.notna(esm_row['subcategory']):
                 category = esm_row['subcategory']
-            if 'vendor_name' in esm_row.index and pd.notna(esm_row['vendor_name']): # Added vendor_name lookup for ESM
+            if 'vendor_name' in esm_row.index and pd.notna(esm_row['vendor_name']): 
                 vendor_name = esm_row['vendor_name']
-            if 'vendor_number' in esm_row.index and pd.notna(esm_row['vendor_number']): # Added vendor_number lookup for ESM
+            if 'vendor_number' in esm_row.index and pd.notna(esm_row['vendor_number']): 
                 vendor_number = esm_row['vendor_number']
             if 'received_date' in esm_row.index and pd.notna(esm_row['received_date']):
                 received_date = esm_row['received_date']
@@ -382,8 +383,8 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
                 vendor_name = pm7_row['vendor_name']
             if 'vendor_number' in pm7_row.index and pd.notna(pm7_row['vendor_number']):
                 vendor_number = pm7_row['vendor_number']
-            if 'co_code' in pm7_row.index and pd.notna(pm7_row['co_code']): # Using 'co_code' column
-                company_code = pm7_row['co_code']
+            if 'company_code' in pm7_row.index and pd.notna(pm7_row['company_code']): 
+                company_code = pm7_row['company_code']
             if 'received_date' in pm7_row.index and pd.notna(pm7_row['received_date']):
                 received_date = pm7_row['received_date']
 
@@ -508,10 +509,9 @@ def process_files():
 
     session['temp_dir'] = temp_dir
 
-    # Region mapping file should be in the same directory as index.py
-    # or a known relative path.
-    # Assuming 'company_code_region_mapping.xlsx' is in the same directory as this index.py
-    REGION_MAPPING_FILE_PATH = os.path.join(BASE_DIR, 'company_code_region_mapping.xlsx')
+    # --- THIS IS THE CRITICAL CHANGE ---
+    # Now, the region mapping file is in the project root, so we go up one level from BASE_DIR (which is 'api/')
+    REGION_MAPPING_FILE_PATH = os.path.join(BASE_DIR, '..', 'company_code_region_mapping.xlsx')
 
 
     try:
@@ -639,7 +639,9 @@ def download_file(filename):
         print("DEBUG: temp_dir not found in session.")
         flash('File not found for download or session expired. Please re-run the process.', 'error')
         return redirect(url_for('index'))
-        
+
+    # Construct the expected full path based on the session's temp_dir
+    # This is safer than relying on the exact string in session if temp_dir changes
     consolidated_session_path = session.get('consolidated_output_path')
     central_session_path = session.get('central_output_path')
 
@@ -687,5 +689,7 @@ def cleanup_session():
     session.pop('central_output_path', None)
     return redirect(url_for('index'))
 
+# This block is for local development only and should not be active on Vercel.
+# Vercel's build process will find and run your 'app' object directly.
 if __name__ == '__main__':
     app.run(debug=True)
