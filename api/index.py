@@ -1,3 +1,5 @@
+# api/index.py
+
 import os
 import pandas as pd
 from datetime import datetime
@@ -10,18 +12,17 @@ from werkzeug.utils import secure_filename
 
 warnings.filterwarnings('ignore')
 
+# --- Vercel Specific Path Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(BASE_DIR, '..', 'templates')
 static_dir = os.path.join(BASE_DIR, '..', 'static')
 
 # Initialize Flask app
-# Vercel needs the 'app' object at the root of the file.
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
-
 
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default_secret_key_for_local_dev_only')
 
-# --- Global Variables (from app.py) ---
+# --- Global Variables ---
 CONSOLIDATED_OUTPUT_COLUMNS = [
     'Barcode', 'Processor', 'Channel', 'Category', 'Company code', 'Region',
     'Vendor number', 'Vendor Name', 'Status', 'Received Date', 'Re-Open Date',
@@ -29,7 +30,7 @@ CONSOLIDATED_OUTPUT_COLUMNS = [
     'Remarks', 'Aging', 'Today'
 ]
 
-# --- Helper Functions (from app.py) ---
+# --- Helper Functions ---
 
 def format_date_to_mdyyyy(date_series):
     """
@@ -68,7 +69,6 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
     print("Starting data consolidation process...")
     print("All input DataFrames loaded successfully!")
 
-    # Always work with copies to avoid modifying original DFs passed in
     df_pisa = clean_column_names(df_pisa.copy())
     df_esm = clean_column_names(df_esm.copy())
     df_pm7 = clean_column_names(df_pm7.copy())
@@ -86,10 +86,10 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
     today_date = datetime.now()
 
     # --- PISA Processing ---
-    if 'barcode' not in df_pisa_filtered.columns: # Check for 'barcode' directly
+    if 'barcode' not in df_pisa_filtered.columns:
         print("Error: 'barcode' column not found in PISA file (after cleaning). Skipping PISA processing.")
     else:
-        df_pisa_filtered['barcode'] = df_pisa_filtered['barcode'].astype(str) # Ensure it's string
+        df_pisa_filtered['barcode'] = df_pisa_filtered['barcode'].astype(str)
         for index, row in df_pisa_filtered.iterrows():
             new_row = {
                 'Barcode': row['barcode'],
@@ -97,7 +97,7 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
                 'Vendor number': row.get('vendor_number'),
                 'Received Date': row.get('received_date'),
                 'Completion Date': None, 'Status': None , 'Today': today_date, 'Channel': 'PISA',
-                'Vendor Name': row.get('vendor'), # Changed from vendor_name to vendor as per app.py consolidation
+                'Vendor Name': row.get('vendor_name'),
                 'Re-Open Date': None, 'Allocation Date': None,
                 'Requester': None, 'Clarification Date': None, 'Aging': None, 'Remarks': None,
                 'Region': None,
@@ -107,10 +107,10 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
         print(f"Collected {len(df_pisa_filtered)} rows from PISA.")
 
     # --- ESM Processing ---
-    if 'barcode' not in df_esm.columns: # Check for 'barcode' directly
+    if 'barcode' not in df_esm.columns:
         print("Error: 'barcode' column not found in ESM file (after cleaning). Skipping ESM processing.")
     else:
-        df_esm['barcode'] = df_esm['barcode'].astype(str) # Ensure it's string
+        df_esm['barcode'] = df_esm['barcode'].astype(str)
         for index, row in df_esm.iterrows():
             new_row = {
                 'Barcode': row['barcode'],
@@ -121,13 +121,12 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
                 'Re-Open Date': row.get('updated') if (row.get('state') or '').lower() == 'reopened' else None,
                 'Today': today_date, 'Remarks': row.get('short_description'),
                 'Channel': 'ESM',
-                'Company code': None,'Vendor Name': None, # Set to None, will be looked up later if needed
-                'Vendor number': None, # Set to None, will be looked up later if needed
-                'Allocation Date': None,
+                'Company code': None,'Vendor Name': None,
+                'Vendor number': None, 'Allocation Date': None,
                 'Clarification Date': None, 'Aging': None,
                 'Region': None,
                 'Processor': None,
-                'Category': None # Set to None, will be looked up later if needed (e.g. subcategory)
+                'Category': None
             }
             all_consolidated_rows.append(new_row)
         print(f"Collected {len(df_esm)} rows from ESM.")
@@ -136,7 +135,6 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
     if 'barcode' not in df_pm7.columns:
         print("Error: 'barcode' column not found in PM7 file (after cleaning). Skipping PM7 processing.")
     else:
-        # PM7 already has 'barcode', so just ensure it's string
         df_pm7['barcode'] = df_pm7['barcode'].astype(str)
 
         for index, row in df_pm7.iterrows():
@@ -242,7 +240,6 @@ def process_central_file_step2_update_existing(consolidated_df, central_file_inp
     print(f"Updated 'status' column in central file for Step 2 for {len(df_central_cleaned)} records.")
 
     try:
-        # Renaming columns for consistency with CONSOLIDATED_OUTPUT_COLUMNS
         common_cols_map = {
             'barcode': 'Barcode', 'channel': 'Channel', 'company_code': 'Company code',
             'vendor_name': 'Vendor Name', 'vendor_number': 'Vendor number',
@@ -270,7 +267,6 @@ def process_central_file_step2_update_existing(consolidated_df, central_file_inp
             if col == 'Company code':
                  df_central_cleaned[col] = df_central_cleaned[col].astype(str).replace('nan', '')
 
-        # Ensure all CONSOLIDATED_OUTPUT_COLUMNS are present
         for col in CONSOLIDATED_OUTPUT_COLUMNS:
             if col not in df_central_cleaned.columns:
                 df_central_cleaned[col] = None
@@ -289,31 +285,26 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
     """
     print(f"\n--- Starting Central File Status Processing (Step 3: Final Merge & Needs Review) ---")
 
-    # Clean copies of original DFs for lookups
     df_pisa_lookup = clean_column_names(df_pisa_original.copy())
     df_esm_lookup = clean_column_names(df_esm_original.copy())
     df_pm7_lookup = clean_column_names(df_pm7_original.copy())
 
-    # --- PISA Indexing ---
     df_pisa_indexed = pd.DataFrame()
     if 'barcode' in df_pisa_lookup.columns:
-        df_pisa_lookup['barcode'] = df_pisa_lookup['barcode'].astype(str) # Ensure it's string
+        df_pisa_lookup['barcode'] = df_pisa_lookup['barcode'].astype(str)
         df_pisa_indexed = df_pisa_lookup.set_index('barcode')
         print(f"PISA lookup indexed by 'barcode'.")
     else:
         print("Warning: 'barcode' column not found in cleaned PISA lookup. Cannot perform PISA lookups.")
 
-
-    # --- ESM Indexing ---
     df_esm_indexed = pd.DataFrame()
     if 'barcode' in df_esm_lookup.columns:
-        df_esm_lookup['barcode'] = df_esm_lookup['barcode'].astype(str) # Ensure it's string
+        df_esm_lookup['barcode'] = df_esm_lookup['barcode'].astype(str)
         df_esm_indexed = df_esm_lookup.set_index('barcode')
         print(f"ESM lookup indexed by 'barcode'.")
     else:
         print("Warning: 'barcode' column not found in cleaned ESM lookup. Cannot perform ESM lookups.")
 
-    # --- PM7 Indexing ---
     df_pm7_indexed = pd.DataFrame()
     if 'barcode' in df_pm7_lookup.columns:
         df_pm7_lookup['barcode'] = df_pm7_lookup['barcode'].astype(str)
@@ -341,7 +332,6 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
         barcode = row_consolidated['Barcode']
         channel = row_consolidated['Channel']
 
-        # Initialize with consolidated_df values
         vendor_name = row_consolidated.get('Vendor Name')
         vendor_number = row_consolidated.get('Vendor number')
         company_code = row_consolidated.get('Company code')
@@ -352,7 +342,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
         # --- PISA Lookup ---
         if channel == 'PISA' and not df_pisa_indexed.empty and barcode in df_pisa_indexed.index:
             pisa_row = df_pisa_indexed.loc[barcode]
-            if 'vendor_name' in pisa_row.index and pd.notna(pisa_row['vendor_name']): 
+            if 'vendor_name' in pisa_row.index and pd.notna(pisa_row['vendor_name']):
                 vendor_name = pisa_row['vendor_name']
             if 'vendor_number' in pisa_row.index and pd.notna(pisa_row['vendor_number']):
                 vendor_number = pisa_row['vendor_number']
@@ -368,13 +358,12 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
                 company_code = esm_row['company_code']
             if 'subcategory' in esm_row.index and pd.notna(esm_row['subcategory']):
                 category = esm_row['subcategory']
-            if 'vendor_name' in esm_row.index and pd.notna(esm_row['vendor_name']): 
+            if 'vendor_name' in esm_row.index and pd.notna(esm_row['vendor_name']):
                 vendor_name = esm_row['vendor_name']
-            if 'vendor_number' in esm_row.index and pd.notna(esm_row['vendor_number']): 
+            if 'vendor_number' in esm_row.index and pd.notna(esm_row['vendor_number']):
                 vendor_number = esm_row['vendor_number']
             if 'received_date' in esm_row.index and pd.notna(esm_row['received_date']):
                 received_date = esm_row['received_date']
-
 
         # --- PM7 Lookup ---
         elif channel == 'PM7' and not df_pm7_indexed.empty and barcode in df_pm7_indexed.index:
@@ -383,7 +372,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
                 vendor_name = pm7_row['vendor_name']
             if 'vendor_number' in pm7_row.index and pd.notna(pm7_row['vendor_number']):
                 vendor_number = pm7_row['vendor_number']
-            if 'company_code' in pm7_row.index and pd.notna(pm7_row['company_code']): 
+            if 'company_code' in pm7_row.index and pd.notna(pm7_row['company_code']):
                 company_code = pm7_row['company_code']
             if 'received_date' in pm7_row.index and pd.notna(pm7_row['received_date']):
                 received_date = pm7_row['received_date']
@@ -394,7 +383,6 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
         new_central_row_data['Company code'] = company_code if company_code is not None else ''
         new_central_row_data['Received Date'] = received_date
         new_central_row_data['Status'] = 'New'
-        # Vercel might not support %#m/%#d/%Y, using standard %m/%d/%Y
         new_central_row_data['Allocation Date'] = datetime.now().strftime("%m/%d/%Y")
         new_central_row_data['Processor'] = processor if processor is not None else ''
         new_central_row_data['Category'] = category if category is not None else ''
@@ -434,6 +422,22 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
     df_final_central = df_final_central[CONSOLIDATED_OUTPUT_COLUMNS]
 
     df_final_central = pd.concat([df_final_central, df_new_central_rows], ignore_index=True)
+
+    # --- NEW LOGIC START: Handle blank Company Code for PM7 channel ---
+    print("\n--- Applying PM7 Company Code population logic ---")
+    if 'Channel' in df_final_central.columns and 'Company code' in df_final_central.columns and 'Barcode' in df_final_central.columns:
+        # Identify PM7 rows with blank or NaN Company code
+        pm7_blank_cc_mask = (df_final_central['Channel'] == 'PM7') & \
+                            (df_final_central['Company code'].astype(str).replace('nan', '').str.strip() == '')
+
+        # Apply logic: take first 4 digits of Barcode
+        df_final_central.loc[pm7_blank_cc_mask, 'Company code'] = \
+            df_final_central.loc[pm7_blank_cc_mask, 'Barcode'].astype(str).str[:4]
+        
+        print(f"Populated Company Code for {pm7_blank_cc_mask.sum()} PM7 records based on Barcode.")
+    else:
+        print("Warning: 'Channel', 'Company code', or 'Barcode' columns missing. Skipping PM7 Company Code population logic.")
+    # --- NEW LOGIC END ---
 
     # --- NEW REGION MAPPING LOGIC ---
     print("\n--- Applying Region Mapping ---")
@@ -491,7 +495,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
     return True, "Central file processing (Step 3) successful"
 
 
-# --- Flask Routes (from app.py) ---
+# --- Flask Routes ---
 
 @app.route('/', methods=['GET'])
 def index():
@@ -499,18 +503,15 @@ def index():
 
 @app.route('/process', methods=['POST'])
 def process_files():
-    # Use /tmp as it's the only writable directory on Vercel serverless functions
     temp_dir = tempfile.mkdtemp(dir='/tmp')
 
-    # Clear previous session data related to file paths
     session.pop('consolidated_output_path', None)
     session.pop('central_output_path', None)
     session.pop('temp_dir', None)
 
     session['temp_dir'] = temp_dir
 
-    # --- THIS IS THE CRITICAL CHANGE ---
-    # Now, the region mapping file is in the project root, so we go up one level from BASE_DIR (which is 'api/')
+    # Region mapping file is in the project root, so we go up one level from BASE_DIR ('api/')
     REGION_MAPPING_FILE_PATH = os.path.join(BASE_DIR, '..', 'company_code_region_mapping.xlsx')
 
 
@@ -640,16 +641,14 @@ def download_file(filename):
         flash('File not found for download or session expired. Please re-run the process.', 'error')
         return redirect(url_for('index'))
 
-    # Construct the expected full path based on the session's temp_dir
-    # This is safer than relying on the exact string in session if temp_dir changes
     consolidated_session_path = session.get('consolidated_output_path')
     central_session_path = session.get('central_output_path')
 
     if consolidated_session_path and os.path.basename(consolidated_session_path) == filename:
-        file_path_in_temp = os.path.join(temp_dir, filename) # Reconstruct path using current temp_dir
+        file_path_in_temp = os.path.join(temp_dir, filename)
         print(f"DEBUG: Matched consolidated file. Reconstructed path: {file_path_in_temp}")
     elif central_session_path and os.path.basename(central_session_path) == filename:
-        file_path_in_temp = os.path.join(temp_dir, filename) # Reconstruct path using current temp_dir
+        file_path_in_temp = os.path.join(temp_dir, filename)
         print(f"DEBUG: Matched final central file. Reconstructed path: {file_path_in_temp}")
     else:
         print(f"DEBUG: Filename '{filename}' did not match any known session output files.")
@@ -689,7 +688,5 @@ def cleanup_session():
     session.pop('central_output_path', None)
     return redirect(url_for('index'))
 
-# This block is for local development only and should not be active on Vercel.
-# Vercel's build process will find and run your 'app' object directly.
 if __name__ == '__main__':
     app.run(debug=True)
