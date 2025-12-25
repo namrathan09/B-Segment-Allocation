@@ -15,7 +15,7 @@ warnings.filterwarnings('ignore')
 # --- Vercel Specific Path Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(BASE_DIR, '..', 'templates')
-static_dir = os.path.join(BASE_DIR, '..', 'static','images')
+static_dir = os.path.join(BASE_DIR, '..', 'static')
 
 # Initialize Flask app
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
@@ -146,7 +146,7 @@ def consolidate_data_process(df_pisa, df_esm, df_pm7, consolidated_output_file_p
                 'Status': row.get('task'),
                 'Today': today_date,
                 'Channel': 'PM7',
-                'Company code': row.get('company_code'), 
+                'Company code': row.get('company_code'),
                 'Re-Open Date': None,
                 'Allocation Date': None, 'Completion Date': None, 'Requester': None,
                 'Clarification Date': None, 'Aging': None, 'Remarks': None,
@@ -433,7 +433,7 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
         # Apply logic: take first 4 digits of Barcode
         df_final_central.loc[pm7_blank_cc_mask, 'Company code'] = \
             df_final_central.loc[pm7_blank_cc_mask, 'Barcode'].astype(str).str[:4]
-        
+
         print(f"Populated Company Code for {pm7_blank_cc_mask.sum()} PM7 records based on Barcode.")
     else:
         print("Warning: 'Channel', 'Company code', or 'Barcode' columns missing. Skipping PM7 Company Code population logic.")
