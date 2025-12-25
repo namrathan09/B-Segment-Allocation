@@ -15,7 +15,7 @@ warnings.filterwarnings('ignore')
 # --- Vercel Specific Path Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(BASE_DIR, '..', 'templates')
-static_dir = os.path.join(BASE_DIR, '..', 'static')
+static_dir = os.path.join(BASE_DIR, '..', 'static','images')
 
 # Initialize Flask app
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
