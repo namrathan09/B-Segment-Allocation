@@ -1,5 +1,3 @@
-# api/index.py
-
 import os
 import pandas as pd
 from datetime import datetime
@@ -426,7 +424,6 @@ def process_central_file_step3_final_merge_and_needs_review(consolidated_df, upd
     # --- NEW LOGIC START: Handle blank Company Code for PM7 channel ---
     print("\n--- Applying PM7 Company Code population logic ---")
     if 'Channel' in df_final_central.columns and 'Company code' in df_final_central.columns and 'Barcode' in df_final_central.columns:
-        # Identify PM7 rows with blank or NaN Company code
         pm7_blank_cc_mask = (df_final_central['Channel'] == 'PM7') & \
                             (df_final_central['Company code'].astype(str).replace('nan', '').str.strip() == '')
 
@@ -514,7 +511,6 @@ def process_files():
     # Region mapping file is in the project root, so we go up one level from BASE_DIR ('api/')
     REGION_MAPPING_FILE_PATH = os.path.join(BASE_DIR, '..', 'company_code_region_mapping.xlsx')
 
-
     try:
         uploaded_files = {}
         file_keys = ['pisa_file', 'esm_file', 'pm7_file', 'central_file']
@@ -526,7 +522,9 @@ def process_files():
             if file.filename == '':
                 flash(f'No selected file for "{key}". All four files are required.', 'error')
                 return redirect(url_for('index'))
-            if file and file.filename.endswith('.xlsx'):
+
+            # Check for file extension (case-insensitive)
+            if file and file.filename.lower().endswith('.xlsx'):
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(temp_dir, filename)
                 file.save(file_path)
@@ -668,7 +666,7 @@ def download_file(filename):
             flash(f'Error providing download: {e}. Please try again.', 'error')
             return redirect(url_for('index'))
     else:
-        print(f"DEBUG: File '{filename}' not found or session data missing/expired. Full path attempted: {file_path_in_temp}")
+        print(f"DEBUG: File '{filename}' not found for download or session data missing/expired. Full path attempted: {file_path_in_temp}")
         flash('File not found for download or session expired. Please re-run the process.', 'error')
         return redirect(url_for('index'))
 
